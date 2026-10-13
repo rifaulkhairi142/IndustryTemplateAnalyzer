@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #f8fafc;
+  color: #0f172a;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Luckysheet container positioning */
+#luckysheet-main, #luckysheet-compare {
+  margin: 0px;
+  padding: 0px;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0px;
+  top: 0px;
+}
+
+/* Light Theme Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Luckysheet Formula Bar, Cell Editor & Operator Token High-Contrast Light Theme */
+#luckysheet-functionbox-cell,
+#luckysheet-input-box,
+.luckysheet-cell-input,
+.luckysheet-functionbox-cell-input {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+}
+
+/* Ensure all formula spans, text tokens, and mathematical operators (+, -, *, /, =) are dark, never white */
+#luckysheet-functionbox-cell span,
+#luckysheet-input-box span,
+.luckysheet-cell-input span,
+.luckysheet-functionbox-cell-input span {
+  color: #0f172a !important;
+}
+
+.luckysheet-formula-text-color {
+  color: #0f172a !important;
+}
+
+.luckysheet-toolbar-button,
+.luckysheet-toolbar-combo-button {
+  color: #334155 !important;
+}
+
+.luckysheet-sheet-area {
+  background-color: #f8fafc !important;
+}
+
+.luckysheet-cols-menu,
+.luckysheet-rightclick-menu {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
