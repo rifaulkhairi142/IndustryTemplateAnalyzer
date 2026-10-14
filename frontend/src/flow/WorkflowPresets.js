@@ -1,0 +1,302 @@
+export const WORKFLOW_PRESETS = [
+  {
+    id: 'deep-trace',
+    title: 'Formula Deep Tracing Pipeline',
+    description: 'Menelusuri alur precedent formula dari sel B8 hingga ke akar input terminal konstanta & graf visual',
+    nodes: [
+      {
+        id: 'node-wb',
+        type: 'workbookSource',
+        position: { x: 50, y: 150 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-sheet',
+        type: 'sheetScope',
+        position: { x: 420, y: 150 },
+        data: { sheet_name: 'Income Statement' },
+      },
+      {
+        id: 'node-cell',
+        type: 'cellRange',
+        position: { x: 780, y: 150 },
+        data: { coordinate: 'B8' },
+      },
+      {
+        id: 'node-tracer',
+        type: 'formulaTracer',
+        position: { x: 1140, y: 100 },
+        data: { direction: 'precedents', max_depth: 15 },
+      },
+      {
+        id: 'node-graph',
+        type: 'dependencyGraph',
+        position: { x: 1550, y: 50 },
+        data: {},
+      },
+      {
+        id: 'node-grid',
+        type: 'spreadsheetViewer',
+        position: { x: 1550, y: 300 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb-sheet', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-sheet', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-cell', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-cell', targetHandle: 'sheet_name' },
+      { id: 'e-wb-tracer', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-tracer', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-tracer', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-tracer', targetHandle: 'sheet_name' },
+      { id: 'e-cell-tracer', source: 'node-cell', sourceHandle: 'coordinate', target: 'node-tracer', targetHandle: 'cell' },
+      { id: 'e-tracer-graph', source: 'node-tracer', sourceHandle: 'graph_data', target: 'node-graph', targetHandle: 'graph_data' },
+      { id: 'e-tracer-grid', source: 'node-tracer', sourceHandle: 'trace_data', target: 'node-grid', targetHandle: 'highlights' },
+    ],
+  },
+
+  {
+    id: 'sheet-compare',
+    title: 'Version & Sheet Comparison Pipeline',
+    description: 'Membandingkan baseline v1 dengan target v2 untuk mendeteksi perubahan formula, sel baru, dan sel terhapus',
+    nodes: [
+      {
+        id: 'node-wb-base',
+        type: 'workbookSource',
+        position: { x: 50, y: 50 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-wb-target',
+        type: 'workbookSource',
+        position: { x: 50, y: 380 },
+        data: { workbook_id: 'sample_v2' },
+      },
+      {
+        id: 'node-compare',
+        type: 'sheetComparator',
+        position: { x: 450, y: 180 },
+        data: {
+          baseline_wb: 'sample_v1',
+          baseline_sheet: 'Revenue',
+          target_wb: 'sample_v2',
+          target_sheet: 'Revenue',
+          mode: 'exact_formula',
+          alignment: 'coordinate',
+        },
+      },
+      {
+        id: 'node-diff-inspector',
+        type: 'diffInspector',
+        position: { x: 880, y: 100 },
+        data: {},
+      },
+      {
+        id: 'node-grid',
+        type: 'spreadsheetViewer',
+        position: { x: 880, y: 360 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb-comp-base', source: 'node-wb-base', sourceHandle: 'workbook_id', target: 'node-compare', targetHandle: 'baseline_wb_id' },
+      { id: 'e-wb-comp-tgt', source: 'node-wb-target', sourceHandle: 'workbook_id', target: 'node-compare', targetHandle: 'target_wb_id' },
+      { id: 'e-comp-diffs', source: 'node-compare', sourceHandle: 'diffs_list', target: 'node-diff-inspector', targetHandle: 'diffs_list' },
+      { id: 'e-comp-grid', source: 'node-compare', sourceHandle: 'diff_summary', target: 'node-grid', targetHandle: 'highlights' },
+    ],
+  },
+
+  {
+    id: 'quality-audit',
+    title: 'Comprehensive Quality Audit Pipeline',
+    description: 'Memindai seluruh anomali formula: referensi data tersembunyi, angka hardcoded di deret, pola inkonsisten, dan #REF!',
+    nodes: [
+      {
+        id: 'node-wb',
+        type: 'workbookSource',
+        position: { x: 50, y: 150 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-audit',
+        type: 'auditEngine',
+        position: { x: 450, y: 120 },
+        data: {},
+      },
+      {
+        id: 'node-audit-inspector',
+        type: 'auditInspector',
+        position: { x: 880, y: 80 },
+        data: {},
+      },
+      {
+        id: 'node-grid',
+        type: 'spreadsheetViewer',
+        position: { x: 880, y: 350 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb-audit', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-audit', targetHandle: 'workbook_id' },
+      { id: 'e-audit-insp', source: 'node-audit', sourceHandle: 'anomalies_list', target: 'node-audit-inspector', targetHandle: 'anomalies_list' },
+      { id: 'e-audit-grid', source: 'node-audit', sourceHandle: 'anomaly_summary', target: 'node-grid', targetHandle: 'highlights' },
+    ],
+  },
+
+  {
+    id: 'hidden-risk',
+    title: 'Hidden Dependency Risk Pipeline',
+    description: 'Melacak baris/kolom/sheet tersembunyi yang memiliki Critical Visible Consumers (menyupalai formula aktif)',
+    nodes: [
+      {
+        id: 'node-wb',
+        type: 'workbookSource',
+        position: { x: 50, y: 150 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-hidden',
+        type: 'hiddenTrace',
+        position: { x: 450, y: 120 },
+        data: { scope: 'active', only_in_use: true },
+      },
+      {
+        id: 'node-grid',
+        type: 'spreadsheetViewer',
+        position: { x: 880, y: 200 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb-hidden', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-hidden', targetHandle: 'workbook_id' },
+      { id: 'e-hidden-grid', source: 'node-hidden', sourceHandle: 'hidden_summary', target: 'node-grid', targetHandle: 'highlights' },
+    ],
+  },
+
+  {
+    id: 'range-composition',
+    title: 'Range Composition Heatmap Pipeline',
+    description: 'Menganalisis range sel untuk mengidentifikasi sel cross-sheet, formula lokal, angka hardcoded, dan sel kosong',
+    nodes: [
+      {
+        id: 'node-wb',
+        type: 'workbookSource',
+        position: { x: 50, y: 150 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-sheet',
+        type: 'sheetScope',
+        position: { x: 420, y: 150 },
+        data: { sheet_name: 'Revenue' },
+      },
+      {
+        id: 'node-range-sel',
+        type: 'cellRange',
+        position: { x: 780, y: 150 },
+        data: { coordinate: 'B2:F10' },
+      },
+      {
+        id: 'node-range-analyzer',
+        type: 'rangeAnalysis',
+        position: { x: 1140, y: 120 },
+        data: {},
+      },
+      {
+        id: 'node-grid',
+        type: 'spreadsheetViewer',
+        position: { x: 1540, y: 200 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb-sheet', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-sheet', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-range', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-range-sel', targetHandle: 'sheet_name' },
+      { id: 'e-wb-ra', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-range-analyzer', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-ra', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-range-analyzer', targetHandle: 'sheet_name' },
+      { id: 'e-range-ra', source: 'node-range-sel', sourceHandle: 'coordinate', target: 'node-range-analyzer', targetHandle: 'range' },
+      { id: 'e-ra-grid', source: 'node-range-analyzer', sourceHandle: 'range_summary', target: 'node-grid', targetHandle: 'highlights' },
+    ],
+  },
+
+  {
+    id: 'master-pipeline',
+    title: 'Master All-Features Pipeline',
+    description: 'Pipeline terpadu yang menghubungkan seluruh fitur analisis ke satu kanvas dan generator laporan akhir',
+    nodes: [
+      {
+        id: 'node-wb',
+        type: 'workbookSource',
+        position: { x: 50, y: 250 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-sheet',
+        type: 'sheetScope',
+        position: { x: 420, y: 100 },
+        data: { sheet_name: 'Income Statement' },
+      },
+      {
+        id: 'node-cell',
+        type: 'cellRange',
+        position: { x: 780, y: 100 },
+        data: { coordinate: 'B8' },
+      },
+      {
+        id: 'node-tracer',
+        type: 'formulaTracer',
+        position: { x: 1140, y: 50 },
+        data: { direction: 'precedents', max_depth: 15 },
+      },
+      {
+        id: 'node-discovery',
+        type: 'formulaDiscovery',
+        position: { x: 780, y: 350 },
+        data: {},
+      },
+      {
+        id: 'node-audit',
+        type: 'auditEngine',
+        position: { x: 420, y: 450 },
+        data: {},
+      },
+      {
+        id: 'node-hidden',
+        type: 'hiddenTrace',
+        position: { x: 420, y: 750 },
+        data: { scope: 'active', only_in_use: true },
+      },
+      {
+        id: 'node-evaluator',
+        type: 'formulaEvaluator',
+        position: { x: 1140, y: 420 },
+        data: {},
+      },
+      {
+        id: 'node-grid',
+        type: 'spreadsheetViewer',
+        position: { x: 1550, y: 150 },
+        data: {},
+      },
+      {
+        id: 'node-report',
+        type: 'reportExport',
+        position: { x: 1550, y: 450 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb-sheet', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-sheet', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-cell', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-cell', targetHandle: 'sheet_name' },
+      { id: 'e-wb-tracer', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-tracer', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-tracer', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-tracer', targetHandle: 'sheet_name' },
+      { id: 'e-cell-tracer', source: 'node-cell', sourceHandle: 'coordinate', target: 'node-tracer', targetHandle: 'cell' },
+      { id: 'e-wb-disc', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-discovery', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-disc', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-discovery', targetHandle: 'sheet_name' },
+      { id: 'e-wb-audit', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-audit', targetHandle: 'workbook_id' },
+      { id: 'e-wb-hidden', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-hidden', targetHandle: 'workbook_id' },
+      { id: 'e-wb-eval', source: 'node-wb', sourceHandle: 'workbook_id', target: 'node-evaluator', targetHandle: 'workbook_id' },
+      { id: 'e-sheet-eval', source: 'node-sheet', sourceHandle: 'sheet_name', target: 'node-evaluator', targetHandle: 'sheet_name' },
+      { id: 'e-cell-eval', source: 'node-cell', sourceHandle: 'coordinate', target: 'node-evaluator', targetHandle: 'cell' },
+      { id: 'e-tracer-grid', source: 'node-tracer', sourceHandle: 'trace_data', target: 'node-grid', targetHandle: 'highlights' },
+      { id: 'e-tracer-rep', source: 'node-tracer', sourceHandle: 'trace_data', target: 'node-report', targetHandle: 'data' },
+    ],
+  },
+];

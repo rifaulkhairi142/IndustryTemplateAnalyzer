@@ -119,3 +119,27 @@ async def get_sheet_formulas(id: str, name: str):
         raise HTTPException(status_code=404, detail="Workbook not found")
     result = workbook_manager.get_sheet_formulas(id, name)
     return SheetFormulasResponse(**result)
+
+@router.post("/evaluate-cell")
+async def evaluate_cell(payload: dict):
+    from backend.app.services.formula_evaluator import formula_evaluator
+    wb_id = payload.get("workbook_id")
+    sheet_name = payload.get("sheet_name")
+    coord = payload.get("cell", "").replace('$', '').upper()
+    override_formula = payload.get("formula")
+    entry = workbook_manager.get_workbook(wb_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Workbook not found")
+    
+    evaluated_dict = formula_evaluator.evaluate_workbook_cells(entry.cells)
+    computed_val = evaluated_dict.get(sheet_name, {}).get(coord)
+    raw_info = entry.cells.get(sheet_name, {}).get(coord, {})
+    return {
+        "workbook_id": wb_id,
+        "sheet_name": sheet_name,
+        "cell": coord,
+        "formula": override_formula or raw_info.get("formula"),
+        "computed_value": computed_val,
+        "cached_value": raw_info.get("value")
+    }
+

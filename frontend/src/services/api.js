@@ -178,4 +178,17 @@ export const api = {
     }
     return res.json();
   },
+
+  async evaluateCell({ workbook_id, sheet_name, cell, formula = null }) {
+    const res = await fetch(`${BASE_URL}/workbook/evaluate-cell`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workbook_id, sheet_name, cell, formula }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Evaluation failed' }));
+      throw new Error(err.detail || 'Evaluation failed');
+    }
+    return res.json();
+  },
 };

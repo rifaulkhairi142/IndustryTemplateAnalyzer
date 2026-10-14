@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import psycopg2
@@ -29,6 +30,8 @@ class DatabaseService:
         self.is_connected = False
         self.is_migrated = False
         self.last_error: Optional[str] = None
+        self._last_check_time = 0.0
+        self._check_cooldown = 15.0
 
     def _sanitize_identifier(self, name: str) -> str:
         """Sanitize SQL identifiers like schema or table names to prevent injection."""
@@ -41,7 +44,7 @@ class DatabaseService:
             conn = psycopg2.connect(
                 self.database_url,
                 options=f"-c search_path={self.schema},public",
-                connect_timeout=5
+                connect_timeout=1
             )
         else:
             conn = psycopg2.connect(
@@ -51,15 +54,21 @@ class DatabaseService:
                 user=self.user,
                 password=self.password,
                 options=f"-c search_path={self.schema},public",
-                connect_timeout=5
+                connect_timeout=1
             )
         return conn
 
-    def check_connection(self) -> bool:
+    def check_connection(self, force: bool = False) -> bool:
         """
         Verify database connection and check whether migrations have been applied.
         Does NOT execute any DDL. DDL is handled via standalone migration runner.
+        Caches offline state for 15s to prevent blocking the async event loop.
         """
+        now = time.time()
+        if not force and (now - self._last_check_time < self._check_cooldown):
+            return self.is_connected and self.is_migrated
+
+        self._last_check_time = now
         try:
             conn = self._get_connection()
             with conn:
@@ -92,18 +101,17 @@ class DatabaseService:
             self.is_migrated = False
             self.last_error = str(e)
             logger.warning(f"[DB Connection Error] {e}")
-            print(f"[DB Warning] Gagal terhubung ke PostgreSQL ({self.host}:{self.port}/{self.dbname}): {e}")
             return False
 
-    def ensure_ready(self) -> bool:
+    def ensure_ready(self, force: bool = False) -> bool:
         """Ensure connection is healthy and migration is present."""
         if self.is_connected and self.is_migrated:
             return True
-        return self.check_connection()
+        return self.check_connection(force=force)
 
-    def ensure_connected(self) -> bool:
+    def ensure_connected(self, force: bool = False) -> bool:
         """Alias for ensure_ready."""
-        return self.ensure_ready()
+        return self.ensure_ready(force=force)
 
 
     def save_workbook(
