@@ -16,9 +16,26 @@ import {
   GitFork,
   FileText,
   Plus,
+  TrendingUp,
+  BarChart3,
+  Bot,
+  Sparkles,
 } from 'lucide-react';
 
 const NODE_CATALOG = [
+  {
+    category: 'AI & Intelligent Assistants',
+    nodes: [
+      {
+        type: 'aiInteractive',
+        title: 'AI Interactive Context Analyst',
+        desc: 'Analisis cerdas & chat interaktif berbasis lokal AI Ollama (qwen2.5, gemma4) dengan multi-konteks pipeline',
+        icon: Bot,
+        badge: 'Local AI',
+        color: 'text-violet-600 bg-violet-50 border-violet-200',
+      },
+    ],
+  },
   {
     category: 'Sources & Scopes',
     nodes: [
@@ -100,6 +117,14 @@ const NODE_CATALOG = [
         color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
       },
       {
+        type: 'historicalStatement',
+        title: 'Historical Statement Comparator',
+        desc: 'Bandingkan Income Statement, Balance Sheet & Cash Flow dari multi-workbook',
+        icon: TrendingUp,
+        badge: 'Compare',
+        color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+      },
+      {
         type: 'auditEngine',
         title: 'Audit & Anomaly Engine',
         desc: 'Pindai referensi data tersembunyi, inkonsistensi pola, hardcoded & error',
@@ -137,6 +162,14 @@ const NODE_CATALOG = [
         color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
       },
       {
+        type: 'historicalInspector',
+        title: 'Historical Statement Inspector',
+        desc: 'Tabel komparasi akun, varians, pertumbuhan % & waterfall audit formula',
+        icon: BarChart3,
+        badge: 'Inspector',
+        color: 'text-cyan-600 bg-cyan-50 border-cyan-200',
+      },
+      {
         type: 'auditInspector',
         title: 'Audit Inspector Cards',
         desc: 'Kartu anomali dan peringatan dengan tingkat keparahan & jump to cell',
@@ -168,7 +201,7 @@ export default function AddNodeDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-[99999] flex justify-end bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
       <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slideLeft">
         {/* Header */}
         <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">

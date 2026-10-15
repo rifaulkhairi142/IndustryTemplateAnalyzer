@@ -15,6 +15,7 @@ import {
   Table,
   Cpu,
   Layers,
+  SquareSplitHorizontal,
 } from 'lucide-react';
 
 export default function FlowNavbar() {
@@ -71,7 +72,6 @@ export default function FlowNavbar() {
           </div>
           <div>
             <h1 className="text-xs font-bold text-slate-900 leading-tight">Formula Intelligence</h1>
-            <span className="text-[10px] text-slate-500 font-medium">Visual Node Pipeline</span>
           </div>
         </div>
 
@@ -80,43 +80,37 @@ export default function FlowNavbar() {
           <button
             type="button"
             onClick={() => setViewMode('flow')}
-            className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'flow'
-                ? 'bg-white text-blue-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 ${viewMode === 'flow'
+              ? 'bg-white text-blue-700 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
             title="Kanvas node penuh"
           >
             <Workflow size={13} />
-            Flow Canvas
           </button>
 
           <button
             type="button"
             onClick={() => setViewMode('split')}
-            className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'split'
-                ? 'bg-white text-blue-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 ${viewMode === 'split'
+              ? 'bg-white text-blue-700 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
             title="Split view: Node di kiri, Spreadsheet di kanan"
           >
-            <Split size={13} />
-            Split View (50/50)
+            <SquareSplitHorizontal size={13} />
           </button>
 
           <button
             type="button"
             onClick={() => setViewMode('spreadsheet')}
-            className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'spreadsheet'
-                ? 'bg-white text-blue-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 ${viewMode === 'spreadsheet'
+              ? 'bg-white text-blue-700 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
             title="Spreadsheet Luckysheet layar penuh"
           >
             <Table size={13} />
-            Spreadsheet Focus
           </button>
         </div>
       </div>

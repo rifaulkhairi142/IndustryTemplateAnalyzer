@@ -14,6 +14,10 @@ import DiffInspectorNode from '../nodes/DiffInspectorNode';
 import AuditInspectorNode from '../nodes/AuditInspectorNode';
 import ReportExportNode from '../nodes/ReportExportNode';
 
+import HistoricalStatementNode from '../nodes/HistoricalStatementNode';
+import HistoricalInspectorNode from '../nodes/HistoricalInspectorNode';
+import AiInteractiveNode from '../nodes/AiInteractiveNode';
+
 export const nodeTypes = {
   workbookSource: WorkbookSourceNode,
   sheetScope: SheetScopeNode,
@@ -24,6 +28,9 @@ export const nodeTypes = {
   rangeAnalysis: RangeAnalysisNode,
   hiddenTrace: HiddenTraceNode,
   sheetComparator: SheetComparatorNode,
+  historicalStatement: HistoricalStatementNode,
+  historicalInspector: HistoricalInspectorNode,
+  aiInteractive: AiInteractiveNode,
   auditEngine: AuditEngineNode,
   spreadsheetViewer: SpreadsheetViewerNode,
   dependencyGraph: DependencyGraphNode,
@@ -31,3 +38,4 @@ export const nodeTypes = {
   auditInspector: AuditInspectorNode,
   reportExport: ReportExportNode,
 };
+

@@ -56,7 +56,13 @@ async def get_trace_graph(req: TraceFormulaRequest):
         )
         return {
             "target": f"{req.sheet_name}!{req.cell}",
+            "workbook_id": req.workbook_id,
+            "sheet_name": req.sheet_name,
+            "cell": req.cell,
             "direction": req.direction,
+            "max_depth_configured": req.max_depth,
+            "max_depth_reached": result.max_depth_reached,
+            "can_expand_further": result.can_expand_further,
             "nodes": [n.model_dump() for n in result.nodes],
             "edges": [e.model_dump() for e in result.edges],
             "has_circular": result.has_circular_reference,

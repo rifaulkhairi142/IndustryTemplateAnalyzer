@@ -89,27 +89,39 @@ async def get_workbook_data(id: str):
 @router.post("/load-samples")
 async def load_samples():
     from backend.app.services.sample_generator import create_sample_workbooks
-    f1, f2 = create_sample_workbooks()
+    samples = create_sample_workbooks()
+    f1, f2 = samples[0], samples[1]
+    f3 = samples[2] if len(samples) > 2 else None
     entry1 = workbook_manager.add_workbook(f1, "financial_model.xlsx", custom_id="sample_v1")
     entry2 = workbook_manager.add_workbook(f2, "financial_model_v2.xlsx", custom_id="sample_v2")
+    sample_list = [
+        {
+            "workbook_id": entry1.workbook_id,
+            "filename": entry1.filename,
+            "sheets": [s.name for s in entry1.sheets_meta],
+            "luckysheet_data": entry1.luckysheet_data,
+            "total_formulas": entry1.total_formulas
+        },
+        {
+            "workbook_id": entry2.workbook_id,
+            "filename": entry2.filename,
+            "sheets": [s.name for s in entry2.sheets_meta],
+            "luckysheet_data": entry2.luckysheet_data,
+            "total_formulas": entry2.total_formulas
+        }
+    ]
+    if f3:
+        entry3 = workbook_manager.add_workbook(f3, "financial_model_v3.xlsx", custom_id="sample_v3")
+        sample_list.append({
+            "workbook_id": entry3.workbook_id,
+            "filename": entry3.filename,
+            "sheets": [s.name for s in entry3.sheets_meta],
+            "luckysheet_data": entry3.luckysheet_data,
+            "total_formulas": entry3.total_formulas
+        })
     return {
         "message": "Sample workbooks loaded successfully",
-        "samples": [
-            {
-                "workbook_id": entry1.workbook_id,
-                "filename": entry1.filename,
-                "sheets": [s.name for s in entry1.sheets_meta],
-                "luckysheet_data": entry1.luckysheet_data,
-                "total_formulas": entry1.total_formulas
-            },
-            {
-                "workbook_id": entry2.workbook_id,
-                "filename": entry2.filename,
-                "sheets": [s.name for s in entry2.sheets_meta],
-                "luckysheet_data": entry2.luckysheet_data,
-                "total_formulas": entry2.total_formulas
-            }
-        ]
+        "samples": sample_list
     }
 
 @router.get("/{id}/sheet/{name}/formulas", response_model=SheetFormulasResponse)

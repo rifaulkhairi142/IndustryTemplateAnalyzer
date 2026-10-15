@@ -392,7 +392,7 @@ export default function LuckysheetGrid({
   }, [containerId, zoomRatio, applyZoom]);
 
   return (
-    <div className="relative flex-1 w-full h-full overflow-hidden bg-white">
+    <div className="relative z-0 flex-1 w-full h-full overflow-hidden bg-white">
       <div id={containerId} />
     </div>
   );

@@ -66,7 +66,7 @@ class TraceFormulaRequest(BaseModel):
     sheet_name: str
     cell: str # e.g. "C10"
     direction: str = "precedents" # "precedents" | "dependents" | "both"
-    max_depth: int = 15
+    max_depth: int = 3
 
 class TraceFormulaResponse(BaseModel):
     target_cell: str
@@ -79,6 +79,8 @@ class TraceFormulaResponse(BaseModel):
     has_circular_reference: bool
     circular_paths: List[List[str]] = []
     max_depth_reached: int
+    max_depth_configured: Optional[int] = None
+    can_expand_further: bool = False
     tree: Dict[str, Any]
     execution_logs: List[str] = []
     elapsed_seconds: float = 0.0
@@ -131,15 +133,18 @@ class AnomalyItem(BaseModel):
     row: int
     col: int
     severity: str # "high", "medium", "low"
-    anomaly_type: str # "formula_inconsistency", "hardcoded_in_series", "external_reference", "circular_reference", "ref_error"
+    anomaly_type: str # "formula_inconsistency", "hardcoded_in_series", "range_omission", "embedded_constant", "external_reference", "circular_reference", "ref_error", "hidden_reference"
     description: str
     formula: Optional[str] = None
     expected_pattern: Optional[str] = None
+    expected_formula: Optional[str] = None
+    neighbor_summary: Optional[str] = None
     affected_context: Optional[str] = None
 
 class AuditAnomaliesResponse(BaseModel):
     workbook_id: str
     sheet_name: Optional[str] = None
+    range: Optional[str] = None
     total_anomalies: int
     high_severity_count: int
     medium_severity_count: int
@@ -241,3 +246,77 @@ class TraceHiddenResponse(BaseModel):
     hidden_columns: List[HiddenColumnItem] = []
     hidden_cells: List[HiddenCellItem] = []
     hidden_sheets: List[HiddenSheetItem] = []
+
+# ==========================================
+# Historical Financial Statement Comparison Schemas
+# ==========================================
+
+class HistoricalStatementItem(BaseModel):
+    workbook_id: str
+    sheet_name: Optional[str] = None
+    range: Optional[str] = None
+    formula_range: Optional[str] = None
+    label: Optional[str] = None
+
+class HistoricalStatementCompareRequest(BaseModel):
+    statement_type: str = "income_statement" # "income_statement" | "balance_sheet" | "cashflow" | "custom"
+    items: List[HistoricalStatementItem]
+    alignment_mode: str = "account_name" # "account_name" | "coordinate" | "row_order"
+    baseline_index: int = 0
+
+class AccountValueItem(BaseModel):
+    workbook_id: str
+    label: str
+    filename: Optional[str] = None
+    sheet_name: Optional[str] = None
+    range: Optional[str] = None
+    formula_range: Optional[str] = None
+    account_name: Optional[str] = None
+    account_coord: Optional[str] = None
+    coordinate: Optional[str] = None
+    row: Optional[int] = None
+    col: Optional[int] = None
+    value: Any = None
+    formatted_value: Optional[str] = None
+    formula: Optional[str] = None
+    is_formula: bool = False
+    is_present: bool = True
+    col_values: Optional[List[Dict[str, Any]]] = None
+    common_size_pct: Optional[float] = None
+
+class AccountComparisonRow(BaseModel):
+    account_name: str
+    normalized_name: str
+    is_summary: bool = False
+    match_status: str = "matched" # "matched" | "only_in_wb1" | "only_in_wb2" | "partial"
+    present_in_wbs: List[str] = []
+    missing_in_wbs: List[str] = []
+    values_by_wb: Dict[str, AccountValueItem]
+    baseline_value: Any = None
+    target_values: Dict[str, Any] = {}
+    variances: Dict[str, Optional[float]] = {}
+    growth_pcts: Dict[str, Optional[float]] = {}
+    formula_statuses: Dict[str, str] = {}
+    anomalies: List[str] = []
+
+class StatementSummaryKPIs(BaseModel):
+    statement_type: str
+    total_accounts: int = 0
+    matched_accounts: int = 0
+    unmatched_accounts: int = 0
+    only_in_wb1_count: int = 0
+    only_in_wb2_count: int = 0
+    formula_divergence_count: int = 0
+    key_metrics: Dict[str, Any] = {}
+    alerts: List[str] = []
+
+class HistoricalStatementCompareResponse(BaseModel):
+    statement_type: str
+    alignment_mode: str
+    baseline_label: str
+    workbooks_info: List[Dict[str, Any]]
+    columns: List[str]
+    accounts: List[AccountComparisonRow]
+    summary: StatementSummaryKPIs
+    highlights: List[Dict[str, Any]] = []
+

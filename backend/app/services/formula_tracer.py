@@ -9,6 +9,7 @@ from backend.app.services.formula_parser import (
 from backend.app.models.schemas import (
     DependencyNode, DependencyEdge, TraceFormulaResponse
 )
+from backend.app.utils.logger import log_tracer
 
 class FormulaTracer:
     def __init__(self):
@@ -73,6 +74,7 @@ class FormulaTracer:
         def log_event(msg: str):
             t_str = datetime.now().strftime("%H:%M:%S")
             logs.append(f"[{t_str}] {msg}")
+            log_tracer(msg)
 
         root_id = f"{sheet_name}!{clean_coord}"
         root_cell = self._get_cell_data(wb_entry, sheet_name, clean_coord)
@@ -90,6 +92,7 @@ class FormulaTracer:
         circular_paths: List[List[str]] = []
         has_circular = False
         max_depth_reached = 0
+        can_expand_further = False
 
         # Create root node
         root_node = DependencyNode(
@@ -112,7 +115,7 @@ class FormulaTracer:
             visited_in_dfs: Set[str] = set()
 
             def dfs_precedents(current_sheet: str, current_coord: str, depth: int, path: List[str]) -> Dict[str, Any]:
-                nonlocal max_depth_reached, has_circular
+                nonlocal max_depth_reached, has_circular, can_expand_further
                 max_depth_reached = max(max_depth_reached, depth)
                 curr_id = f"{current_sheet}!{current_coord}"
                 c_data = self._get_cell_data(wb_entry, current_sheet, current_coord)
@@ -138,6 +141,8 @@ class FormulaTracer:
                 }
 
                 if depth >= max_depth:
+                    if curr_formula:
+                        can_expand_further = True
                     log_event(f"   -> Batas kedalaman maksimal tercapai (level {depth}) pada {curr_id}")
                     return tree_node
 
@@ -283,7 +288,7 @@ class FormulaTracer:
                 return wb_entry._dependents_index.get(target_full, [])
 
             def dfs_dependents(current_sheet: str, current_coord: str, depth: int, path: List[str]) -> Dict[str, Any]:
-                nonlocal max_depth_reached, has_circular
+                nonlocal max_depth_reached, has_circular, can_expand_further
                 max_depth_reached = max(max_depth_reached, depth)
                 curr_id = f"{current_sheet}!{current_coord}"
                 c_data = self._get_cell_data(wb_entry, current_sheet, current_coord)
@@ -306,6 +311,8 @@ class FormulaTracer:
                 }
 
                 if depth >= max_depth:
+                    if find_direct_dependents(current_sheet, current_coord):
+                        can_expand_further = True
                     log_event(f"   -> Batas kedalaman maksimal tercapai (level {depth}) pada {curr_id}")
                     return tree_node
 
@@ -384,6 +391,8 @@ class FormulaTracer:
             has_circular_reference=has_circular,
             circular_paths=circular_paths,
             max_depth_reached=max_depth_reached,
+            max_depth_configured=max_depth,
+            can_expand_further=can_expand_further,
             tree=root_tree,
             execution_logs=logs,
             elapsed_seconds=elapsed_sec
@@ -405,6 +414,7 @@ class FormulaTracer:
         def log_event(msg: str):
             t_str = datetime.now().strftime("%H:%M:%S")
             logs.append(f"[{t_str}] {msg}")
+            log_tracer(msg)
 
         formula_coords = []
         for c in expanded_coords:
@@ -482,6 +492,8 @@ class FormulaTracer:
             has_circular_reference=has_circular,
             circular_paths=circular_paths,
             max_depth_reached=max_depth_reached,
+            max_depth_configured=max_depth,
+            can_expand_further=False,
             tree=range_tree,
             execution_logs=logs,
             elapsed_seconds=elapsed_sec

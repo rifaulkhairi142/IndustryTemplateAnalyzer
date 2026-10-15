@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from backend.app.services.formula_comparator import formula_comparator
-from backend.app.models.schemas import CompareSheetsRequest, CompareSheetsResponse
+from backend.app.services.historical_comparator import historical_comparator
+from backend.app.models.schemas import (
+    CompareSheetsRequest,
+    CompareSheetsResponse,
+    HistoricalStatementCompareRequest,
+    HistoricalStatementCompareResponse,
+)
 
 router = APIRouter(prefix="/api/compare", tags=["Compare"])
 
@@ -26,3 +32,17 @@ async def compare_sheets(req: CompareSheetsRequest):
         raise HTTPException(status_code=status_code, detail=detail_msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Comparison error: {str(e)}")
+
+@router.post("/historical-statements", response_model=HistoricalStatementCompareResponse)
+async def compare_historical_statements(req: HistoricalStatementCompareRequest):
+    """Compare Historical Financial Statements (Income Statement, Balance Sheet, Cash Flow) across multiple workbooks."""
+    try:
+        result = historical_comparator.compare_statements(req)
+        return result
+    except ValueError as e:
+        detail_msg = str(e)
+        status_code = 404 if "not found" in detail_msg.lower() else 400
+        raise HTTPException(status_code=status_code, detail=detail_msg)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Historical statement comparison error: {str(e)}")
+

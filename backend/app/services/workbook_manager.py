@@ -1,3 +1,4 @@
+import time
 import uuid
 from typing import Dict, Any, List, Optional, Tuple, Set
 import openpyxl
@@ -6,6 +7,7 @@ from backend.app.services.formula_parser import (
     parse_cell_coordinate, format_cell_coordinate, normalize_formula, extract_functions_from_formula, extract_references_from_formula
 )
 from backend.app.models.schemas import SheetMetadata, FormulaItem, FormulaGroup
+from backend.app.utils.logger import log_workbook, log_error
 
 class WorkbookEntry:
     def __init__(self, workbook_id: str, filename: str, filepath: str, luckysheet_data: List[Dict[str, Any]], total_formulas: int):
@@ -114,10 +116,21 @@ class WorkbookManager:
         custom_id: Optional[str] = None,
         save_to_db: bool = True
     ) -> WorkbookEntry:
+        start_time = time.perf_counter()
         wb_id = custom_id or str(uuid.uuid4())[:8]
+        log_workbook(f"Memproses file Excel: '{filename}' (ID: {wb_id})...")
         luckysheet_data, total_formulas = workbook_to_luckysheet(filepath)
         entry = WorkbookEntry(wb_id, filename, filepath, luckysheet_data, total_formulas)
         self._workbooks[wb_id] = entry
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        sheet_names_str = ", ".join(s.name for s in entry.sheets_meta[:5])
+        if len(entry.sheets_meta) > 5:
+            sheet_names_str += f", +{len(entry.sheets_meta) - 5} lainnya"
+        log_workbook(
+            f"Berhasil memuat '{filename}' -> ID: '{wb_id}' | {len(entry.sheets_meta)} Sheet ({sheet_names_str}) | "
+            f"{total_formulas} Formula terindeks dalam {elapsed_ms:.1f}ms"
+        )
 
         # Save uploaded file metadata to PostgreSQL
         if save_to_db and not wb_id.startswith("sample_"):
@@ -129,8 +142,9 @@ class WorkbookManager:
                     total_formulas=total_formulas,
                     sheets_meta=entry.sheets_meta
                 )
+                log_workbook(f"Metadata workbook '{filename}' tersimpan ke PostgreSQL.")
             except Exception as e:
-                print(f"[WorkbookManager] Warning: Failed to persist workbook {wb_id} to DB: {e}")
+                log_error(f"Gagal menyimpan workbook {wb_id} ke PostgreSQL", e)
 
         return entry
 

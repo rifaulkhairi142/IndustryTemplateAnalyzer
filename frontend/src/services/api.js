@@ -139,10 +139,13 @@ export const api = {
     return res.json();
   },
 
-  async getAuditAnomalies(workbook_id, sheet_name = null) {
+  async getAuditAnomalies(workbook_id, sheet_name = null, range = null) {
     let url = `${BASE_URL}/audit/anomalies?workbook_id=${encodeURIComponent(workbook_id)}`;
     if (sheet_name) {
       url += `&sheet_name=${encodeURIComponent(sheet_name)}`;
+    }
+    if (range) {
+      url += `&range=${encodeURIComponent(range)}`;
     }
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch audit anomalies');
@@ -191,4 +194,115 @@ export const api = {
     }
     return res.json();
   },
+
+  async compareHistoricalStatements({
+    statement_type = 'income_statement',
+    items = [],
+    alignment_mode = 'account_name',
+    baseline_index = 0,
+  }) {
+    const res = await fetch(`${BASE_URL}/compare/historical-statements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        statement_type,
+        items,
+        alignment_mode,
+        baseline_index,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Historical statement comparison failed' }));
+      throw new Error(err.detail || 'Historical statement comparison failed');
+    }
+    return res.json();
+  },
+
+  async getAiStatus() {
+    const res = await fetch(`${BASE_URL}/ai/status`);
+    if (!res.ok) throw new Error('Failed to get AI status');
+    return res.json();
+  },
+
+  async getAiModels() {
+    const res = await fetch(`${BASE_URL}/ai/models`);
+    if (!res.ok) throw new Error('Failed to get AI models');
+    return res.json();
+  },
+
+  async streamAiChat({
+    model,
+    messages,
+    contexts = {},
+    system_prompt = null,
+    onToken,
+    onComplete,
+    onError,
+    signal,
+  }) {
+    try {
+      const res = await fetch(`${BASE_URL}/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages,
+          contexts,
+          system_prompt,
+          stream: true,
+        }),
+        signal,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'AI request failed' }));
+        throw new Error(err.detail || 'AI request failed');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let fullText = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const jsonStr = trimmed.slice(6);
+            try {
+              const parsed = JSON.parse(jsonStr);
+              if (parsed.error) {
+                if (onError) onError(new Error(parsed.error));
+                return;
+              }
+              if (parsed.content) {
+                fullText += parsed.content;
+                if (onToken) onToken(parsed.content, fullText);
+              }
+              if (parsed.done) {
+                if (onComplete) onComplete(fullText);
+                return;
+              }
+            } catch (e) {
+              console.warn('Error parsing SSE json:', e);
+            }
+          }
+        }
+      }
+      if (onComplete) onComplete(fullText);
+    } catch (err) {
+      if (err.name !== 'AbortError' && onError) {
+        onError(err);
+      }
+    }
+  },
 };
+
+

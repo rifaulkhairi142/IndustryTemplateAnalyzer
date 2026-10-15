@@ -5,11 +5,13 @@ from backend.app.services.formula_parser import (
     parse_cell_coordinate, format_cell_coordinate, index_to_col_letter,
     extract_references_from_formula
 )
+import time
 from backend.app.models.schemas import (
     HiddenConsumerItem, HiddenCellItem, HiddenRowItem,
     HiddenColumnItem, HiddenSheetItem, HiddenSummary,
     TraceHiddenResponse
 )
+from backend.app.utils.logger import log_tracer
 
 class HiddenDependencyTracer:
     def _ensure_dependents_index(self, wb_entry: WorkbookEntry):
@@ -44,6 +46,9 @@ class HiddenDependencyTracer:
         wb_entry = workbook_manager.get_workbook(workbook_id)
         if not wb_entry:
             raise ValueError(f"Workbook {workbook_id} not found")
+
+        t0 = time.perf_counter()
+        log_tracer(f"Tracing hidden elements: Workbook='{wb_entry.filename}' ({workbook_id}), SheetFilter={sheet_filter or 'All'}, OnlyInUse={only_in_use}")
 
         self._ensure_dependents_index(wb_entry)
         inv_index = wb_entry._dependents_index
@@ -254,6 +259,14 @@ class HiddenDependencyTracer:
             hidden_sheets_in_use=hidden_sheets_in_use,
             total_hidden_cells_in_use=len(hidden_cells_res),
             critical_visible_consumers_count=critical_visible_consumers_count
+        )
+
+        elapsed = (time.perf_counter() - t0) * 1000
+        log_tracer(
+            f"Hidden trace completed: {len(hidden_rows_res)} rows ({hidden_rows_in_use} in-use), "
+            f"{len(hidden_cols_res)} cols ({hidden_cols_in_use} in-use), "
+            f"{len(hidden_sheets_res)} sheets ({hidden_sheets_in_use} in-use), "
+            f"{len(hidden_cells_res)} hidden cells with consumers in {elapsed:.1f}ms"
         )
 
         return TraceHiddenResponse(

@@ -40,6 +40,7 @@ export default function DiffInspectorNode({ id, data }) {
         { id: 'selected_diff_coord', label: 'Cell', tooltip: 'Koordinat sel diff yang dipilih' },
       ]}
       onDelete={() => removeNode(id)}
+      allowFullscreen={true}
       minWidth="min-w-[340px]"
     >
       {diffs.length === 0 ? (

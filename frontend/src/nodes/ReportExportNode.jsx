@@ -94,6 +94,7 @@ export default function ReportExportNode({ id, data }) {
         { id: 'data', label: 'Data', tooltip: 'Hubungkan output dari node analisis mana pun' },
       ]}
       onDelete={() => removeNode(id)}
+      allowFullscreen={true}
       minWidth="min-w-[300px]"
     >
       <div className="flex flex-col gap-2">

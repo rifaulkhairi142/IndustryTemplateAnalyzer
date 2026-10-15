@@ -79,3 +79,23 @@ body {
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
+
+/* Ensure Luckysheet internal custom scrollbars stay confined inside grid and never overlay modals */
+#luckysheet-scrollbar-x,
+#luckysheet-scrollbar-y,
+.luckysheet-scrollbar-ltr,
+.luckysheet-scroll-bar {
+  z-index: 10 !important;
+}
+
+/* Whenever ANY modal, drawer, or fullscreen overlay is open, completely hide Luckysheet scrollbars to prevent bleed-through */
+body:has([class*="fixed inset-0"]) #luckysheet-scrollbar-x,
+body:has([class*="fixed inset-0"]) #luckysheet-scrollbar-y,
+body:has([class*="fixed inset-0"]) .luckysheet-scrollbar-ltr,
+body:has([class*="fixed inset-0"]) .luckysheet-scroll-bar {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+

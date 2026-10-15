@@ -15,6 +15,7 @@ import {
   GitFork,
   ChevronDown,
   ChevronRight,
+  Plus,
 } from 'lucide-react';
 
 export default function FormulaTracerNode({ id, data }) {
@@ -30,7 +31,7 @@ export default function FormulaTracerNode({ id, data }) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [direction, setDirection] = useState(data.direction || 'precedents');
-  const [maxDepth, setMaxDepth] = useState(data.max_depth || 15);
+  const [maxDepth, setMaxDepth] = useState(data.max_depth || 2);
   const [isLogsExpanded, setIsLogsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -44,8 +45,9 @@ export default function FormulaTracerNode({ id, data }) {
   const terminalSources = traceData?.terminal_sources || [];
   const hasCircular = traceData?.has_circular_reference;
 
-  const handleExecuteTrace = async () => {
+  const handleExecuteTrace = async (overrideDepth) => {
     if (!effectiveWbId || !effectiveSheet || !targetCell) return;
+    const depthToUse = typeof overrideDepth === 'number' ? overrideDepth : maxDepth;
     setIsLoading(true);
     try {
       const result = await api.traceFormula({
@@ -53,7 +55,7 @@ export default function FormulaTracerNode({ id, data }) {
         sheet_name: effectiveSheet,
         cell: targetCell,
         direction,
-        max_depth: maxDepth,
+        max_depth: depthToUse,
       });
 
       // Highlight on sheet
@@ -68,7 +70,13 @@ export default function FormulaTracerNode({ id, data }) {
 
       const graph = {
         target: `${effectiveSheet}!${targetCell}`,
+        workbook_id: effectiveWbId,
+        sheet_name: effectiveSheet,
+        cell: targetCell,
         direction,
+        max_depth_configured: depthToUse,
+        max_depth_reached: result.max_depth_reached,
+        can_expand_further: result.can_expand_further,
         nodes: result.nodes,
         edges: result.edges,
         has_circular: result.has_circular_reference,
@@ -82,13 +90,19 @@ export default function FormulaTracerNode({ id, data }) {
         execution_logs: result.execution_logs || [],
         circular_paths: result.circular_paths || [],
         direction,
-        max_depth: maxDepth,
+        max_depth: depthToUse,
       });
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleNextLevelTrace = async () => {
+    const nextDepth = maxDepth + 1;
+    setMaxDepth(nextDepth);
+    await handleExecuteTrace(nextDepth);
   };
 
   const handleCopyLogs = () => {
@@ -117,6 +131,7 @@ export default function FormulaTracerNode({ id, data }) {
       ]}
       status={isLoading ? 'running' : traceData ? 'success' : 'idle'}
       onDelete={() => removeNode(id)}
+      onFullscreen={data?.graph_data ? () => openGraphModal(data.graph_data) : undefined}
       minWidth="min-w-[340px]"
     >
       {/* Target & Config Bar */}
@@ -157,28 +172,59 @@ export default function FormulaTracerNode({ id, data }) {
           </button>
         </div>
 
-        {/* Max Depth Slider */}
-        <div className="flex items-center justify-between text-[11px] text-slate-600 gap-2">
-          <span>Max Depth: <strong>{maxDepth}</strong></span>
-          <input
-            type="range"
-            min="1"
-            max="30"
-            value={maxDepth}
-            onChange={(e) => setMaxDepth(parseInt(e.target.value, 10))}
-            className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-          />
+        {/* Depth Level Preset Buttons & Slider */}
+        <div className="flex flex-col gap-1 bg-slate-50 p-2 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+            <span>Kedalaman Trace (Max Depth):</span>
+            <span className="font-mono font-bold text-blue-700">Level {maxDepth}</span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1 text-[10px] font-semibold">
+            {[1, 2, 3, 5].map((lvl) => (
+              <button
+                key={lvl}
+                type="button"
+                onClick={() => setMaxDepth(lvl)}
+                className={`py-1 rounded border transition text-center cursor-pointer ${
+                  maxDepth === lvl
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {lvl === 1 ? 'Lvl 1 (Direct)' : lvl === 2 ? 'Lvl 2 (Rec.)' : `Lvl ${lvl}`}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] text-slate-500 gap-2 mt-0.5">
+            <span>Slider:</span>
+            <input
+              type="range"
+              min="1"
+              max="15"
+              value={maxDepth}
+              onChange={(e) => setMaxDepth(parseInt(e.target.value, 10))}
+              className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+            <span className="font-mono font-bold text-slate-700 w-4 text-right">{maxDepth}</span>
+          </div>
+
+          {maxDepth > 4 && (
+            <div className="text-[9.5px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+              ⚠️ Level &gt; 4 memproses banyak node. Gunakan Level 1-2 untuk performa instan.
+            </div>
+          )}
         </div>
 
         {/* Execute Button */}
         <button
           type="button"
-          onClick={handleExecuteTrace}
+          onClick={() => handleExecuteTrace()}
           disabled={isLoading || !targetCell}
           className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition cursor-pointer shadow-2xs disabled:opacity-50"
         >
           <Play size={12} />
-          {isLoading ? 'Sedang Melacak Dependensi...' : 'Execute Trace'}
+          {isLoading ? 'Sedang Melacak Dependensi...' : `Execute Trace (Level ${maxDepth})`}
         </button>
       </div>
 
@@ -199,6 +245,18 @@ export default function FormulaTracerNode({ id, data }) {
               <GitFork size={11} /> Visual Graph
             </button>
           </div>
+
+          {/* Incremental Next-Level Tracing Button */}
+          <button
+            type="button"
+            onClick={handleNextLevelTrace}
+            disabled={isLoading}
+            className="w-full inline-flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-[11px] transition cursor-pointer shadow-2xs disabled:opacity-50"
+            title="Perdalam penelusuran dengan menambahkan 1 level kedalaman"
+          >
+            <Plus size={12} />
+            Lanjutkan Trace Level Selanjutnya (Level {maxDepth + 1})
+          </button>
 
           {/* Circular Reference Warning */}
           {hasCircular && (

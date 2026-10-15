@@ -1,9 +1,11 @@
+import time
 from typing import Dict, Any, List, Set, Optional, Tuple
 from backend.app.services.workbook_manager import workbook_manager
 from backend.app.services.formula_parser import parse_cell_coordinate, format_cell_coordinate, parse_range_bounds
 from backend.app.models.schemas import (
     CompareSheetsResponse, CellDiff
 )
+from backend.app.utils.logger import log_comparator
 
 class FormulaComparator:
     def compare_sheets(
@@ -18,6 +20,7 @@ class FormulaComparator:
         mode: str = "exact_formula", # exact_formula | normalized_formula | values_only
         alignment: str = "coordinate"
     ) -> CompareSheetsResponse:
+        start_time = time.perf_counter()
         base_wb = workbook_manager.get_workbook(baseline_wb_id)
         target_wb = workbook_manager.get_workbook(target_wb_id)
 
@@ -25,6 +28,11 @@ class FormulaComparator:
             raise ValueError(f"Baseline workbook {baseline_wb_id} not found")
         if not target_wb:
             raise ValueError(f"Target workbook {target_wb_id} not found")
+
+        log_comparator(
+            f"Memulai Komparasi Sheet: Baseline='{base_wb.filename}!{baseline_sheet}' "
+            f"<===> Target='{target_wb.filename}!{target_sheet}' | Mode: {mode} | Alignment: {alignment}"
+        )
 
         base_cells = base_wb.cells.get(baseline_sheet, {})
         target_cells = target_wb.cells.get(target_sheet, {})
@@ -227,8 +235,12 @@ class FormulaComparator:
             summary_range = norm_base_range
         elif norm_base_range and norm_target_range:
             summary_range = f"{norm_base_range} ↔ {norm_target_range}"
-        else:
-            summary_range = f"Base: {norm_base_range or 'All'} | Tgt: {norm_target_range or 'All'}"
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        log_comparator(
+            f"Komparasi Selesai: Total {len(diffs)} sel berbeda "
+            f"(Formula Berubah: {formula_changed_count}, Nilai Berubah: {value_changed_count}, "
+            f"Ditambah: {added_count}, Dihapus: {removed_count}, Identik: {identical_count}) dalam {elapsed_ms:.1f}ms"
+        )
 
         return CompareSheetsResponse(
             baseline_workbook_id=baseline_wb_id,

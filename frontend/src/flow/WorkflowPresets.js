@@ -1,5 +1,125 @@
 export const WORKFLOW_PRESETS = [
   {
+    id: 'ai-interactive-analyst',
+    title: '🤖 AI Interactive Multi-Context Pipeline (Ollama)',
+    description: 'Pipeline analisis cerdas bertenaga AI lokal (Ollama): menghubungkan perbandingan akun laporan keuangan historis, penelusuran dependensi formula, dan audit anomali langsung ke AI Assistant',
+    nodes: [
+      {
+        id: 'node-wb-1',
+        type: 'workbookSource',
+        position: { x: 40, y: 50 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-wb-2',
+        type: 'workbookSource',
+        position: { x: 40, y: 380 },
+        data: { workbook_id: 'sample_v2' },
+      },
+      {
+        id: 'node-hist-compare',
+        type: 'historicalStatement',
+        position: { x: 420, y: 50 },
+        data: {
+          statement_type: 'income_statement',
+          alignment_mode: 'account_name',
+          baseline_index: 0,
+          items: [
+            { workbook_id: 'sample_v1', sheet_name: 'Income Statement', range: '', label: 'Workbook 1' },
+            { workbook_id: 'sample_v2', sheet_name: 'Income Statement', range: '', label: 'Workbook 2' },
+          ],
+        },
+      },
+      {
+        id: 'node-tracer',
+        type: 'formulaTracer',
+        position: { x: 420, y: 450 },
+        data: { workbook_id: 'sample_v1', sheet_name: 'Income Statement', cell: 'B8', direction: 'precedents', max_depth: 2 },
+      },
+      {
+        id: 'node-ai',
+        type: 'aiInteractive',
+        position: { x: 920, y: 100 },
+        data: { model: 'qwen2.5:latest' },
+      },
+      {
+        id: 'node-hist-inspector',
+        type: 'historicalInspector',
+        position: { x: 1400, y: 100 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb1-hist', source: 'node-wb-1', sourceHandle: 'workbook_id', target: 'node-hist-compare', targetHandle: 'wb_1_id' },
+      { id: 'e-wb2-hist', source: 'node-wb-2', sourceHandle: 'workbook_id', target: 'node-hist-compare', targetHandle: 'wb_2_id' },
+      { id: 'e-hist-ai', source: 'node-hist-compare', sourceHandle: 'statement_data', target: 'node-ai', targetHandle: 'context_1' },
+      { id: 'e-tracer-ai', source: 'node-tracer', sourceHandle: 'graph_data', target: 'node-ai', targetHandle: 'context_2' },
+      { id: 'e-hist-inspect', source: 'node-hist-compare', sourceHandle: 'statement_data', target: 'node-hist-inspector', targetHandle: 'statement_data' },
+    ],
+  },
+  {
+    id: 'historical-statements',
+    title: 'Financial Statements Account Reconciliation Pipeline',
+    description: 'Rekonsiliasi & Komparasi Akun Laporan Keuangan (Income Statement, Balance Sheet, Cash Flow) antar workbook template Excel: deteksi akun yang cocok, hilang di Workbook 1, atau hanya ada di Workbook 2 beserta nilai dan posisi sel',
+    nodes: [
+      {
+        id: 'node-wb-1',
+        type: 'workbookSource',
+        position: { x: 50, y: 80 },
+        data: { workbook_id: 'sample_v1' },
+      },
+      {
+        id: 'node-wb-2',
+        type: 'workbookSource',
+        position: { x: 50, y: 440 },
+        data: { workbook_id: 'sample_v2' },
+      },
+      {
+        id: 'node-hist-compare',
+        type: 'historicalStatement',
+        position: { x: 440, y: 140 },
+        data: {
+          statement_type: 'income_statement',
+          alignment_mode: 'account_name',
+          baseline_index: 0,
+          items: [
+            {
+              workbook_id: 'sample_v1',
+              sheet_name: 'Income Statement',
+              range: '',
+              label: 'Workbook 1',
+            },
+            {
+              workbook_id: 'sample_v2',
+              sheet_name: 'Income Statement',
+              range: '',
+              label: 'Workbook 2',
+            },
+          ],
+        },
+      },
+      {
+        id: 'node-hist-inspector',
+        type: 'historicalInspector',
+        position: { x: 940, y: 80 },
+        data: {},
+      },
+      {
+        id: 'node-grid',
+        type: 'spreadsheetViewer',
+        position: { x: 940, y: 520 },
+        data: {},
+      },
+    ],
+    edges: [
+      { id: 'e-wb1-hist', source: 'node-wb-1', sourceHandle: 'workbook_id', target: 'node-hist-compare', targetHandle: 'wb_1_id' },
+      { id: 'e-wb2-hist', source: 'node-wb-2', sourceHandle: 'workbook_id', target: 'node-hist-compare', targetHandle: 'wb_2_id' },
+      { id: 'e-hist-inspect', source: 'node-hist-compare', sourceHandle: 'statement_data', target: 'node-hist-inspector', targetHandle: 'statement_data' },
+      { id: 'e-hist-grid', source: 'node-hist-compare', sourceHandle: 'highlights', target: 'node-grid', targetHandle: 'highlights' },
+    ],
+  },
+
+  {
     id: 'deep-trace',
     title: 'Formula Deep Tracing Pipeline',
     description: 'Menelusuri alur precedent formula dari sel B8 hingga ke akar input terminal konstanta & graf visual',
