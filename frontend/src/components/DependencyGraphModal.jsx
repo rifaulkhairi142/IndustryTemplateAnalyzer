@@ -66,6 +66,30 @@ export default function DependencyGraphModal({
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPos, setStartPanPos] = useState({ x: 0, y: 0 });
 
+  // Container Size measurement for dynamic viewport culling
+  const [containerSize, setContainerSize] = useState({ width: 1000, height: 600 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
+    };
+
+    updateSize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateSize();
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   // Helper to find immediate children in graph hierarchy
   const getChildrenOfNode = useCallback(
     (nodeId) => {
@@ -231,6 +255,67 @@ export default function DependencyGraphModal({
 
     return { nodeCoords, svgWidth, svgHeight };
   }, [visibleNodes]);
+
+  // Viewport Culling: Compute bounding box in graph coordinate space
+  const visibleBounds = useMemo(() => {
+    const w = containerSize.width || 1000;
+    const h = containerSize.height || 600;
+    // Buffer to avoid pop-in during panning (150px converted to canvas scale)
+    const buffer = 150 / Math.max(0.1, zoom);
+
+    return {
+      minX: -pan.x / zoom - buffer,
+      maxX: (w - pan.x) / zoom + buffer,
+      minY: -pan.y / zoom - buffer,
+      maxY: (h - pan.y) / zoom + buffer,
+    };
+  }, [pan.x, pan.y, zoom, containerSize]);
+
+  // Culled Nodes: Only nodes within the viewport bounding box
+  const culledNodeEntries = useMemo(() => {
+    const NODE_WIDTH = 160;
+    const NODE_HEIGHT = 46;
+    const entries = Object.entries(layout.nodeCoords);
+
+    return entries.filter(([, pos]) => {
+      return (
+        pos.x + NODE_WIDTH >= visibleBounds.minX &&
+        pos.x <= visibleBounds.maxX &&
+        pos.y + NODE_HEIGHT >= visibleBounds.minY &&
+        pos.y <= visibleBounds.maxY
+      );
+    });
+  }, [layout.nodeCoords, visibleBounds]);
+
+  const culledNodeIdSet = useMemo(() => {
+    return new Set(culledNodeEntries.map(([id]) => id));
+  }, [culledNodeEntries]);
+
+  // Culled Edges: Only edges connected to visible nodes or crossing the viewport
+  const culledEdges = useMemo(() => {
+    return visibleEdges.filter((e) => {
+      // If either endpoint is in the viewport, render the edge
+      if (culledNodeIdSet.has(e.source) || culledNodeIdSet.has(e.target)) {
+        return true;
+      }
+      // If edge crosses the viewport bounding box
+      const src = layout.nodeCoords[e.source];
+      const tgt = layout.nodeCoords[e.target];
+      if (!src || !tgt) return false;
+
+      const minX = Math.min(src.x, tgt.x);
+      const maxX = Math.max(src.x + 160, tgt.x + 160);
+      const minY = Math.min(src.y, tgt.y);
+      const maxY = Math.max(src.y + 46, tgt.y + 46);
+
+      return !(
+        maxX < visibleBounds.minX ||
+        minX > visibleBounds.maxX ||
+        maxY < visibleBounds.minY ||
+        minY > visibleBounds.maxY
+      );
+    });
+  }, [visibleEdges, culledNodeIdSet, layout.nodeCoords, visibleBounds]);
 
   // Fit Entire Graph inside Viewport
   const handleFitView = useCallback(() => {
@@ -436,7 +521,7 @@ export default function DependencyGraphModal({
               </div>
               <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
                 <span>
-                  Menampilkan: <strong>{visibleNodes.length}</strong> dari {nodes.length} nodes
+                  Viewport: <strong>{culledNodeEntries.length}</strong> / {visibleNodes.length} nodes
                 </span>
                 <span>•</span>
                 <span>
@@ -612,8 +697,8 @@ export default function DependencyGraphModal({
 
             {/* Transformable Canvas Group: Pan & Zoom */}
             <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-              {/* Draw Visible Edges */}
-              {visibleEdges.map((e, idx) => {
+              {/* Draw Culled Edges (Rendered within Viewport) */}
+              {culledEdges.map((e, idx) => {
                 const src = layout.nodeCoords[e.source];
                 const tgt = layout.nodeCoords[e.target];
                 if (!src || !tgt) return null;
@@ -663,8 +748,8 @@ export default function DependencyGraphModal({
                 );
               })}
 
-              {/* Draw Visible Nodes */}
-              {Object.entries(layout.nodeCoords).map(([id, pos]) => {
+              {/* Draw Culled Nodes (Rendered within Viewport) */}
+              {culledNodeEntries.map(([id, pos]) => {
                 const node = pos.node;
                 const config = getNodeTypeConfig(node.node_type);
                 const isTarget = node.node_type === 'target';
@@ -681,6 +766,9 @@ export default function DependencyGraphModal({
                     key={id}
                     transform={`translate(${pos.x}, ${pos.y})`}
                     style={{ cursor: 'pointer' }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Sel ${node.sheet ? `${node.sheet}!` : ''}${node.coordinate}`}
                     onMouseEnter={(e) => handleNodeMouseEnter(e, node)}
                     onMouseMove={handleNodeMouseMove}
                     onMouseLeave={handleNodeMouseLeave}
@@ -689,23 +777,11 @@ export default function DependencyGraphModal({
                       onClose();
                     }}
                   >
-                    {/* Native SVG title as accessible fallback */}
-                    <title>
-                      {`${node.sheet ? `${node.sheet}!` : ''}${node.coordinate}\n` +
-                        `Tipe: ${config.label}\n` +
-                        `Kedalaman: Level ${node.depth ?? 0}\n` +
-                        `Formula: ${node.formula || '(Input Manual / Konstanta)'}\n` +
-                        `Nilai: ${node.value !== null && node.value !== undefined ? node.value : '(null)'}\n` +
-                        (hasChildren
-                          ? `Cabang Anak: ${childIds.length} sel (${isCollapsed ? 'Diciutkan' : 'Terbuka'})`
-                          : '')}
-                    </title>
-
-                    {/* Main Node Box */}
+                    {/* Main Node Box (Sharp rectangular, rx="0") */}
                     <rect
                       width="160"
                       height="46"
-                      rx="8"
+                      rx="0"
                       fill={config.bgFill}
                       stroke={isHovered ? '#1d4ed8' : config.borderColor}
                       strokeWidth={isHovered ? 2.8 : isTarget ? 2.5 : 1.5}
@@ -748,7 +824,7 @@ export default function DependencyGraphModal({
                           }`}
                     </text>
 
-                    {/* Interactive Collapse / Expand Toggle Button on Node */}
+                    {/* Interactive Collapse / Expand Toggle Button on Node (Sharp rectangular, rx="0") */}
                     {hasChildren && (
                       <g
                         transform="translate(136, 6)"
@@ -760,7 +836,7 @@ export default function DependencyGraphModal({
                           width={isCollapsed ? 32 : 18}
                           height="16"
                           x={isCollapsed ? -14 : 0}
-                          rx="4"
+                          rx="0"
                           fill={isCollapsed ? '#f59e0b' : '#e2e8f0'}
                           stroke={isCollapsed ? '#d97706' : '#cbd5e1'}
                           strokeWidth="1"
